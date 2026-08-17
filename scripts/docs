@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# scripts/docs — invoke @archy-stack/package-docs without naming a package manager.
+#
+# A durable document (AGENTS.md, a repository-local policy page, this repository's own docs/)
+# should point at this wrapper, never at `pnpm exec archy-docs` or `npx archy-docs`: this file is
+# the one stable, package-manager-neutral name across npm, pnpm, and yarn (see
+# add-package-docs-lookup design D5 — this wrapper is provisional and may be removed later if the
+# indirection it hides turns out not to be worth a file).
+#
+# This file is committed once, at the repository root — not duplicated into every application
+# surface — so a bare `./scripts/docs` only resolves from the root itself. Invoke it by the
+# root-independent form instead, which finds this file regardless of depth without changing the
+# caller's working directory, so resolution below still starts from wherever the caller actually
+# stood:
+#
+#   "$(git rev-parse --show-toplevel)/scripts/docs" list <package>
+#   "$(git rev-parse --show-toplevel)/scripts/docs" get <package> <document-id>
+set -euo pipefail
+
+dir="$PWD"
+bin=""
+while :; do
+  if [ -x "$dir/node_modules/.bin/archy-docs" ]; then
+    bin="$dir/node_modules/.bin/archy-docs"
+    break
+  fi
+  [ "$dir" = "/" ] && break
+  dir="$(dirname "$dir")"
+done
+
+if [ -z "$bin" ]; then
+  printf 'archy-docs is not installed anywhere above %s.\n' "$PWD" >&2
+  printf "Run your package manager's install first (e.g. \`pnpm install\`).\n" >&2
+  exit 1
+fi
+
+exec "$bin" "$@"

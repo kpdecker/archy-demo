@@ -1,0 +1,17 @@
+# Add files here to ignore them from prettier formatting
+/dist
+/coverage
+/.nx/cache
+/.nx/workspace-data
+.nx/self-healing
+node_modules/
+.nx/
+dist/
+coverage/
+**/.venv/**
+**/.ruff_cache/**
+**/target/**
+.agents/skills/openspec-sync-specs/SKILL.md
+app/scaffold/agent/skills/**/evals/files/
+openspec/changes/archive/**/rehearsal/
+docs/product/**/evidence/

@@ -1,0 +1,48 @@
+{
+  "extraKnownMarketplaces": {
+    "nx-claude-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "nrwl/nx-ai-agents-config"
+      }
+    },
+    "archy": {
+      "source": {
+        "source": "github",
+        "repo": "kpdecker/archy"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "nx@nx-claude-plugins": true,
+    "package-docs@archy": true
+  },
+  "sandbox": {
+    "network": {
+      "allowedDomains": ["www.google-analytics.com"]
+    }
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/format-after-write.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/lint-after-turn.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+packages:
+  - 'app/*/*'
+  - 'libs/*'
+
+# pnpm 10+/11 gate native postinstall/build scripts behind explicit per-package
+# approval. Without an entry here a fresh `pnpm install` HARD-FAILS with
+# ERR_PNPM_IGNORED_BUILDS (verified pnpm 11.13.1) — the older `onlyBuiltDependencies`
+# list is no longer honored. Seed the pinned nx/swc/esbuild toolchain; project-adding
+# skills that pull in new native deps run `pnpm approve-builds --all` to extend this
+# map (see references/nx-conventions.md).
+allowBuilds:
+  nx: true
+  '@swc/core': true
+  '@swc-node/register': true
+  esbuild: true

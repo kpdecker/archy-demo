@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'release/**'
+  pull_request:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  workspace:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.13.1
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # This check is scaffold-specific. Generated repositories skip it until they add their
+      # own shared-tooling checker, while scaffold itself exercises the authoring-time guard.
+      - name: Check shared scaffold tooling
+        if: hashFiles('scripts/check-shared-skill-tooling.sh') != ''
+        run: scripts/check-shared-skill-tooling.sh
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Provision pinned native language toolchains
+        run: scripts/setup-toolchains-ci.sh
+
+      - name: Check formatting without mutation
+        run: pnpm format:check
+
+      # Derive base/head SHAs so `nx affected` only runs what changed on pull requests.
+      - name: Resolve Nx comparison SHAs
+        if: github.event_name == 'pull_request'
+        uses: nrwl/nx-set-shas@v4
+
+      # `contract-check` costs nothing in a workspace with no contract project, because no project
+      # declares the target.
+      - name: Run affected workspace targets
+        if: github.event_name == 'pull_request'
+        run: pnpm exec nx affected -t lint test build typecheck contract-check
+
+      - name: Run all workspace targets
+        if: github.event_name == 'push'
+        run: pnpm exec nx run-many --all -t lint test build typecheck contract-check
+
+      # The producer-side compatibility gate needs a baseline, so it runs only where one exists.
+      # NX_BASE is the SHA nx-set-shas already resolved for affected detection; a push build has no
+      # comparison base and skips the step rather than failing.
+      - name: Check contract compatibility against the pull request base
+        if: github.event_name == 'pull_request'
+        env:
+          CONTRACT_BASE_REF: ${{ env.NX_BASE }}
+        run: pnpm exec nx run-many --all -t contract-compat
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve trusted comparison base
+        id: base
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            base="$PR_BASE_SHA"
+          elif [[ "$EVENT_NAME" == "push" ]]; then
+            base="$PUSH_BASE_SHA"
+          else
+            printf 'Unsupported event for trusted history base: %s\n' "$EVENT_NAME" >&2
+            exit 1
+          fi
+
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then
+            printf 'Trusted comparison base is absent for event %s.\n' "$EVENT_NAME" >&2
+            exit 1
+          fi
+
+          git fetch --no-tags origin "$base"
+          git rev-parse --verify "$base^{commit}" >/dev/null
+          printf 'ref=%s\n' "$base" >> "$GITHUB_OUTPUT"
+
+      - name: Validate product traceability and history
+        run: scripts/check-product-sdlc.sh --base "${{ steps.base.outputs.ref }}"

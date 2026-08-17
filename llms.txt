@@ -1,0 +1,34 @@
+# archy-demo
+
+> archy-demo nx monorepo. A machine-readable index of the key docs for AI agents. The
+> canonical agent instructions are in AGENTS.md at the repo root.
+
+## Documentation
+
+- [Documentation home](docs/index.md): map of the knowledge base (Diátaxis).
+- [Architecture](docs/architecture.md): system overview.
+- [Application surfaces](docs/reference/application-surfaces.md): canonical deployable paths, nx
+  project identities, and tags.
+- [Configuration and secrets](docs/reference/configuration-and-secrets.md): layered resolution,
+  startup validation, runtime secret delivery, and feature-flag evaluation.
+- [Platform conventions](docs/reference/platform-conventions.md): TypeID identifiers, UTC times and
+  dates, integer money and rates, correlation propagation, and machine-classifiable errors.
+- [Service contracts](docs/reference/service-contracts.md): contract-first OpenAPI, generated
+  clients, compatibility verification, path versioning, and shared boundary semantics.
+- [Service descriptors](docs/reference/service-descriptors.md): versioned workload identity,
+  process types, configuration and secret names, and managed-dependency bindings.
+- [Deployment substrates](docs/reference/deployment-substrates.md): production selection, fixed
+  local and ephemeral targets, substrate bounds, and promotion signals.
+- [Local development](docs/reference/local-development.md): the `pnpm dev` entry point, the
+  `dev-setup`/`migrate`/`seed`/`dev` target vocabulary discovered from the Nx graph, host-native
+  processes with Dockerized backing services at descriptor version parity, no cloud credential for
+  any local workflow, and deterministic committed seed programs.
+- [OpenSpec](docs/reference/openspec.md): change workflow and managed generated-skill updates.
+- [Decisions](docs/decisions/): Architecture Decision Records.
+- [Conventions](docs/conventions/): coding and git conventions.
+- [Glossary](docs/glossary.md): domain terms.
+
+## Spec-driven development
+
+- [OpenSpec changes](openspec/changes/): in-flight change proposals.
+- [OpenSpec specs](openspec/specs/): current system behavior (source of truth).

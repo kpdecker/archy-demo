@@ -1,0 +1,12 @@
+diff --git a/.agents/skills/openspec-sync-specs/SKILL.md b/.agents/skills/openspec-sync-specs/SKILL.md
+--- a/.agents/skills/openspec-sync-specs/SKILL.md
++++ b/.agents/skills/openspec-sync-specs/SKILL.md
+@@ -50,6 +50,8 @@ This is an **agent-driven** operation - you will read delta specs and directly e
+ 4. **For each delta spec, apply changes to main specs**
+ 
+    For each repo-local capability delta spec path returned by the CLI:
++   Before editing, if `<planningHome.root>/.scaffold/openspec/sync-policy.md` exists, read it and
++   follow it as additional merge and validation requirements.
+ 
+    a. **Read the delta spec** to understand the intended changes
+ 
