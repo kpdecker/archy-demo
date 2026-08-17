@@ -1,0 +1,20 @@
+name: state-tags
+
+# State tags are this repository's fixture contract: each one records the plugin source that
+# produced a reviewed state. A tag that loses its provenance is only discovered when an evaluation
+# tries to replay it, so check every tag on every change instead.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history and tags: the check walks refs/tags/state/*.
+          fetch-depth: 0
+      - run: ./scripts/check-state-tags.sh
