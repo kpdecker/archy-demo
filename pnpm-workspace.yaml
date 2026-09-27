@@ -13,3 +13,7 @@ allowBuilds:
   '@swc/core': true
   '@swc-node/register': true
   esbuild: true
+
+minimumReleaseAgeExclude:
+  - '@archy-stack/package-docs@0.1.10'
+  - '@archy-stack/platform-contract@0.4.1'
