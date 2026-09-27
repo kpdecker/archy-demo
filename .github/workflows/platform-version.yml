@@ -1,0 +1,26 @@
+name: Platform version
+
+on:
+  push:
+    branches:
+      - main
+      - 'release/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  platform-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Text-only and read-only (design D5): it reads each manifest, including Cargo's root
+      # [workspace.dependencies] table, without a TOML library or `uv`, so it runs unmodified on a
+      # repository with no toolchain provisioned at all -- including a Rust-only one. Two platform
+      # versions in one repository install two physical copies of @archy-stack/platform-contract
+      # and break every `instanceof` check across the boundary (packages/README.md's Third-party
+      # peer dependencies), which is exactly the skew this check exists to catch.
+      - name: Check first-party dependencies against the recorded platform version
+        run: scripts/apply-platform-version.sh --check

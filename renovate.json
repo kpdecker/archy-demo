@@ -1,0 +1,102 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "rangeStrategy": "pin",
+  "schedule": ["before 6am on monday"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "automerge": false,
+  "packageRules": [
+    {
+      "description": "First-party Archy platform packages move only through the recorded platform version at .archy/platform.env, never through a registry lookup.",
+      "matchManagers": ["npm", "cargo", "pep621", "gomod"],
+      "matchPackageNames": ["@archy-stack/**", "archy-*", "github.com/kpdecker/archy/packages/**"],
+      "enabled": false
+    },
+    {
+      "description": "This workflow's own Renovate and uv version pins are a plugin-owned copy; the plugin changes them, not Renovate.",
+      "matchManagers": ["github-actions"],
+      "matchFileNames": [".github/workflows/renovate.yml"],
+      "enabled": false
+    },
+    {
+      "description": "Every recorded platform, tooling, and Scaffold plugin version advances together, in one pull request.",
+      "matchDatasources": [
+        "custom.archy-platform-contract",
+        "custom.archy-lint-config",
+        "custom.archy-package-docs",
+        "custom.archy-scaffold-plugin"
+      ],
+      "groupName": "Archy platform version"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.archy/platform\\.env$/"],
+      "matchStrings": ["ARCHY_PLATFORM_VERSION=(?<currentValue>\\S+)"],
+      "depNameTemplate": "archy-platform-version",
+      "datasourceTemplate": "custom.archy-platform-contract",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.archy/platform\\.env$/"],
+      "matchStrings": ["ARCHY_LINT_CONFIG_VERSION=(?<currentValue>\\S+)"],
+      "depNameTemplate": "archy-lint-config-version",
+      "datasourceTemplate": "custom.archy-lint-config",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.archy/platform\\.env$/"],
+      "matchStrings": ["ARCHY_PACKAGE_DOCS_VERSION=(?<currentValue>\\S+)"],
+      "depNameTemplate": "archy-package-docs-version",
+      "datasourceTemplate": "custom.archy-package-docs",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.archy/platform\\.env$/"],
+      "matchStrings": ["ARCHY_SCAFFOLD_PLUGIN_VERSION=(?<currentValue>\\S+)"],
+      "depNameTemplate": "archy-scaffold-plugin-version",
+      "datasourceTemplate": "custom.archy-scaffold-plugin",
+      "versioningTemplate": "semver"
+    }
+  ],
+  "customDatasources": {
+    "archy-platform-contract": {
+      "defaultRegistryUrlTemplate": "https://api.github.com/repos/kpdecker/archy/contents/app/scaffold/agent/skills/_shared/published-packages.env?ref=stable",
+      "format": "json",
+      "transformTemplates": [
+        "($decoded := $base64decode($replace(content, \"\\n\", \"\")); $lines := $split($decoded, \"\\n\"); $line := $lines[$match($, /^PLATFORM_CONTRACT_VERSION=/)][0]; {\"releases\": [{\"version\": $substringAfter($line, \"=\")}]})"
+      ]
+    },
+    "archy-lint-config": {
+      "defaultRegistryUrlTemplate": "https://api.github.com/repos/kpdecker/archy/contents/app/scaffold/agent/skills/_shared/published-packages.env?ref=stable",
+      "format": "json",
+      "transformTemplates": [
+        "($decoded := $base64decode($replace(content, \"\\n\", \"\")); $lines := $split($decoded, \"\\n\"); $line := $lines[$match($, /^LINT_CONFIG_VERSION=/)][0]; {\"releases\": [{\"version\": $substringAfter($line, \"=\")}]})"
+      ]
+    },
+    "archy-package-docs": {
+      "defaultRegistryUrlTemplate": "https://api.github.com/repos/kpdecker/archy/contents/app/scaffold/agent/skills/_shared/published-packages.env?ref=stable",
+      "format": "json",
+      "transformTemplates": [
+        "($decoded := $base64decode($replace(content, \"\\n\", \"\")); $lines := $split($decoded, \"\\n\"); $line := $lines[$match($, /^PACKAGE_DOCS_VERSION=/)][0]; {\"releases\": [{\"version\": $substringAfter($line, \"=\")}]})"
+      ]
+    },
+    "archy-scaffold-plugin": {
+      "defaultRegistryUrlTemplate": "https://api.github.com/repos/kpdecker/archy/contents/app/scaffold/agent/.claude-plugin/plugin.json?ref=stable",
+      "format": "json",
+      "transformTemplates": [
+        "($decoded := $base64decode($replace(content, \"\\n\", \"\")); $parsed := $eval($decoded); {\"releases\": [{\"version\": $parsed.version}]})"
+      ]
+    }
+  },
+  "postUpgradeTasks": {
+    "commands": ["scripts/apply-platform-version.sh"],
+    "executionMode": "branch"
+  }
+}

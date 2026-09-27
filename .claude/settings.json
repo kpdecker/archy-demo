@@ -9,7 +9,8 @@
     "archy": {
       "source": {
         "source": "github",
-        "repo": "kpdecker/archy"
+        "repo": "kpdecker/archy",
+        "ref": "stable"
       }
     }
   },

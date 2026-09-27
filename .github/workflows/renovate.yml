@@ -1,0 +1,74 @@
+name: Renovate
+
+on:
+  schedule:
+    # Weekly, matching renovate.json's own schedule (upgrade-generated-repositories design D4).
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+
+      # Renovate runs directly on the runner, not through a container-based action, so this step
+      # and the next one provision every toolchain postUpgradeTasks needs on the same PATH the
+      # renovate process itself sees. Renovate's own engines pin needs Node 24; this job's Node
+      # line is independent of the repository's own .nvmrc, which stays whatever platform version
+      # this repository targets.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      # apply-platform-version.sh's Cargo rewrite runs a format-preserving TOML edit through `uv
+      # run --no-project --with tomlkit==...` (design D2), and its Python rewrite runs `uv add`
+      # directly, so a repository with either manifest needs `uv` on PATH before Renovate's
+      # postUpgradeTasks step can run that script. setup-toolchains-ci.sh is not reused here: it
+      # provisions `uv` only for a pyproject.toml, never for a Cargo-only repository (design D3).
+      #
+      # The uv release below is a literal, not a read of _shared/versions.env, because this file
+      # is copied verbatim into a generated repository (design D3).
+      # scripts/check-shared-skill-tooling.sh fails when this literal and UV_VERSION disagree.
+      - name: Provision uv for the platform-version rewrite script
+        if: hashFiles('**/Cargo.toml', '**/pyproject.toml') != ''
+        run: |
+          curl -LsSf "https://astral.sh/uv/0.11.29/install.sh" | sh
+          printf '%s\n' "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # Renovate takes first-party versions only from the derived pin file and the Scaffold
+      # plugin manifest at the gated `stable` ref, through renovate.json's custom datasources and
+      # regex manager over .archy/platform.env -- never from a registry lookup (design D3). This
+      # step passes it the same read credentials the generated CI already holds for that purpose,
+      # plus this repository's own token to open the pull request.
+      - name: Run Renovate
+        # The Renovate release this workflow runs -- a literal, not a read of
+        # _shared/versions.env, because this file is copied verbatim into a generated repository
+        # (design D3). scripts/check-shared-skill-tooling.sh fails when this literal and
+        # RENOVATE_VERSION disagree.
+        run: npx --yes --package renovate@44.115.12 renovate ${{ github.repository }}
+        env:
+          RENOVATE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RENOVATE_PLATFORM: github
+          # Restricted to exactly the post-upgrade command renovate.json declares, so Renovate
+          # refuses to run anything else even if a future config edit tries to add one.
+          RENOVATE_ALLOWED_POST_UPGRADE_COMMANDS: '["^scripts/apply-platform-version\\.sh$"]'
+          # The same three read credentials the generated CI already configures for
+          # scripts/setup-npm-private-registry-ci.sh, scripts/setup-python-private-index-ci.sh,
+          # and scripts/setup-go-private-modules-ci.sh, handed to Renovate as hostRules instead of
+          # a second encrypted copy per credential class (design D3). The Archy repository's own
+          # read credential is scoped to the api.github.com path that serves its contents (the
+          # gated custom-datasource fetches) and to github.com/kpdecker/archy (the private Go
+          # module's direct VCS fallback), so it never overrides RENOVATE_TOKEN above for this
+          # repository's own pull request.
+          RENOVATE_HOST_RULES: >-
+            [{"hostType":"npm","matchHost":"https://registry.npmjs.org/","token":"${{ secrets.NPM_TOKEN }}"},
+            {"matchHost":"https://dl.cloudsmith.io/","token":"${{ secrets.CLOUDSMITH_API_TOKEN }}"},
+            {"matchHost":"https://api.github.com/repos/kpdecker/archy/","token":"${{ secrets.ARCHY_REPOSITORY_READ_TOKEN }}"},
+            {"matchHost":"github.com/kpdecker/archy","token":"${{ secrets.ARCHY_REPOSITORY_READ_TOKEN }}"}]
